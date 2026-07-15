@@ -1,0 +1,12 @@
+# Pinned for Python 3.11–3.14. pydantic 2.13+ ships prebuilt cp314 wheels;
+# older pydantic-core builds try to compile from Rust source on 3.14.
+fastapi>=0.116.1
+uvicorn[standard]>=0.34.0
+sqlalchemy>=2.0.36
+pydantic>=2.11.7
+pydantic-settings>=2.7.1
+python-dotenv>=1.0.1
+google-api-python-client>=2.157.0
+google-auth>=2.37.0
+google-auth-oauthlib>=1.2.1
+tldextract>=5.1.3
