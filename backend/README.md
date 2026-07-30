@@ -58,6 +58,24 @@ uvicorn app.main:app --reload --port 8000
 | GET    | `/api/emails/{id}`  | One email with findings             |
 | POST   | `/api/scan`         | Run a scan cycle now                |
 
+## Offline scanning (no Gmail account needed)
+
+The detection engine also runs on raw `.eml` files, so you can triage a
+forwarded message or check a domain without connecting a mailbox:
+
+```bash
+# Full analysis of a saved email
+python -m app.tools.scan_eml samples/phish_paypal.eml
+
+# Just check one domain for typosquatting
+python -m app.tools.scan_eml --domain paypa1-secure.com
+```
+
+The typosquatting detector (`app/analysis/typosquat.py`) flags sender and link
+domains that impersonate known brands via homoglyph swaps (`paypa1.com`), small
+typos (`micrsoft.com`), combosquatting (`paypal-secure-login.com`), or TLD
+swaps (`paypal.co`).
+
 ## Tests
 
 ```bash

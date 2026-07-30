@@ -1,0 +1,21 @@
+From: "PayPal Service" <service@paypa1-secure-alerts.com>
+Reply-To: <recover@mail-verify.ru>
+To: victim@example.com
+Subject: Your account has been limited - action required
+Date: Tue, 15 Jul 2026 09:14:22 +0000
+Message-ID: <a1b2c3@paypa1-secure-alerts.com>
+Authentication-Results: mx.google.com; spf=fail smtp.mailfrom=paypa1-secure-alerts.com; dkim=none; dmarc=fail header.from=paypa1-secure-alerts.com
+Content-Type: text/html; charset="utf-8"
+MIME-Version: 1.0
+
+<html>
+<body>
+<p>Dear Customer,</p>
+<p>We detected unusual activity and your account has been temporarily
+limited. You must verify your account immediately to avoid permanent
+suspension.</p>
+<p><a href="http://paypa1-account-verify.com/login">https://www.paypal.com/login</a></p>
+<p>Failure to confirm your password within 24 hours will result in account
+closure.</p>
+</body>
+</html>

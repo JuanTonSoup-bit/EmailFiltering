@@ -19,6 +19,7 @@ from .auth import parse_auth_results
 from .language import analyze_language
 from .message import ParsedMessage
 from .spoofing import analyze_spoofing
+from .typosquat import check_domain
 from .urls import analyze_urls
 
 
@@ -80,9 +81,6 @@ def analyze(msg: ParsedMessage) -> AnalysisResult:
     if spoof.display_name_spoof:
         add("display_name_spoof", "Brand impersonation in sender name", 30,
             spoof.display_name_spoof)
-    if spoof.lookalike_brand:
-        add("lookalike_domain", "Lookalike sender domain", 30,
-            spoof.lookalike_brand)
     if spoof.display_email_mismatch:
         add("display_email_mismatch", "Sender name shows a different address",
             20, spoof.display_email_mismatch)
@@ -102,6 +100,27 @@ def analyze(msg: ParsedMessage) -> AnalysisResult:
     if urls.shortener_links:
         add("url_shortener", "Uses a link shortener", 10,
             urls.shortener_links[0])
+
+    # --- Domain typosquatting (sender + links) ---------------------------
+    # The dedicated detector (homoglyph / typo / combo / TLD-swap) supersedes
+    # spoofing.py's simpler lookalike check for the sender domain; fall back
+    # to it only when the detector finds nothing.
+    sender_squat = check_domain(msg.from_domain) if msg.from_domain else None
+    if sender_squat:
+        add("typosquat_domain", "Sender domain impersonates a brand", 30,
+            sender_squat.describe())
+    elif spoof.lookalike_brand:
+        add("lookalike_domain", "Lookalike sender domain", 30,
+            spoof.lookalike_brand)
+
+    for link_domain in sorted(urls.domains):
+        if link_domain == msg.from_domain:
+            continue
+        link_squat = check_domain(link_domain)
+        if link_squat:
+            add("typosquat_link", "Link domain impersonates a brand", 25,
+                link_squat.describe())
+            break
 
     # --- Language --------------------------------------------------------
     lang = analyze_language(msg.subject, msg.body_text)
