@@ -169,7 +169,7 @@ The poller runs every `POLL_INTERVAL_SECONDS` (default 120). To scan
 immediately, press **Scan now** in the dashboard, or:
 
 ```bash
-curl -X POST http://localhost:8000/api/scan
+curl -X POST -H "X-PhishGuard-Client: cli" http://localhost:8000/api/scan
 ```
 
 First run scans mail from the last `INITIAL_LOOKBACK_DAYS` days (default 3),
