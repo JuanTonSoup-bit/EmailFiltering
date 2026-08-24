@@ -1,0 +1,27 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>PhishGuard</title>
+    <meta name="description" content="PhishGuard threat dashboard - self-hosted anti-phishing filter for Gmail." />
+    <link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24'%3E%3Ctext y='19' font-size='19'%3E%F0%9F%9B%A1%EF%B8%8F%3C/text%3E%3C/svg%3E" />
+    <script>
+      // Applied before first paint so a dark-mode user never sees a white flash.
+      // Mirrors the logic in src/lib/theme.js; kept inline because any module
+      // script would run after the browser has already painted the body.
+      try {
+        var stored = localStorage.getItem('phishguard.theme')
+        if (stored === 'dark' || stored === 'light') {
+          document.documentElement.setAttribute('data-theme', stored)
+        }
+      } catch (e) {
+        /* private mode / storage disabled - fall back to prefers-color-scheme */
+      }
+    </script>
+  </head>
+  <body>
+    <div id="root"></div>
+    <script type="module" src="/src/main.jsx"></script>
+  </body>
+</html>

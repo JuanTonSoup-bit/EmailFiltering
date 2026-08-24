@@ -1,0 +1,926 @@
+/* =========================================================================
+   PhishGuard dashboard - design tokens and layout
+   =========================================================================
+
+   Everything visual is driven by CSS custom properties ("tokens") declared
+   once on :root. Components reference tokens by ROLE (--text-secondary,
+   --status-critical) and never hard-code a hex value. That is what makes
+   light/dark a single swap in this file instead of a change in twelve
+   component files.
+
+   Theme resolution has three states and the order below matters:
+     1. bare :root                     -> the complete LIGHT palette (default)
+     2. @media (prefers-color-scheme)  -> OS dark, unless the user forced light
+     3. :root[data-theme="dark"]       -> explicit toggle, wins over the OS
+
+   The :not([data-theme="light"]) guard on the media block is what lets an
+   explicit "light" choice beat an OS that is set to dark.
+
+   Colors come from the validated reference palette (see docs/FRONTEND.md
+   for why each slot was chosen). Verdicts use the STATUS palette, not the
+   categorical one, because clean/junk/suspicious mean good/warning/bad -
+   they are states, not just three arbitrary series. Status colors are
+   deutan-confusable by design (green vs red), so every place a status color
+   appears it is paired with an icon and a written word. Color never carries
+   meaning on its own anywhere in this app.
+   ========================================================================= */
+
+:root {
+  color-scheme: light;
+
+  /* Surfaces */
+  --bg: #f4f3f0;
+  --surface-1: #fcfcfb;
+  --surface-2: #f0efec;
+  --surface-hover: #eceae5;
+  --border: #e0ded8;
+  --grid: #eceae5;
+
+  /* Text */
+  --text-primary: #0b0b0b;
+  --text-secondary: #52514e;
+  --text-muted: #78766f;
+
+  /* Categorical slot 1 - used as the single hue for one-series charts */
+  --series-1: #2a78d6;
+  --series-1-wash: rgba(42, 120, 214, 0.1);
+
+  /* Status palette (fixed - never themed, never reused as a series color) */
+  --status-good: #0ca30c;
+  --status-warning: #fab219;
+  --status-serious: #ec835a;
+  --status-critical: #d03b3b;
+  --status-neutral: #9a988f;
+
+  /* Elevation */
+  --shadow: 0 1px 2px rgba(11, 11, 11, 0.06), 0 1px 8px rgba(11, 11, 11, 0.04);
+
+  /* Type + rhythm */
+  --font-sans: ui-sans-serif, system-ui, -apple-system, "Segoe UI", Roboto,
+    "Helvetica Neue", Arial, sans-serif;
+  --font-mono: ui-monospace, SFMono-Regular, "SF Mono", Menlo, Consolas,
+    "Liberation Mono", monospace;
+  --radius: 10px;
+  --radius-sm: 6px;
+}
+
+@media (prefers-color-scheme: dark) {
+  :root:not([data-theme='light']) {
+    color-scheme: dark;
+
+    --bg: #111110;
+    --surface-1: #1a1a19;
+    --surface-2: #232321;
+    --surface-hover: #2a2a27;
+    --border: #2e2e2b;
+    --grid: #2a2a27;
+
+    --text-primary: #ffffff;
+    --text-secondary: #c3c2b7;
+    --text-muted: #96958c;
+
+    --series-1: #3987e5;
+    --series-1-wash: rgba(57, 135, 229, 0.14);
+
+    --status-neutral: #6f6e66;
+
+    --shadow: 0 1px 2px rgba(0, 0, 0, 0.4), 0 1px 8px rgba(0, 0, 0, 0.24);
+  }
+}
+
+:root[data-theme='dark'] {
+  color-scheme: dark;
+
+  --bg: #111110;
+  --surface-1: #1a1a19;
+  --surface-2: #232321;
+  --surface-hover: #2a2a27;
+  --border: #2e2e2b;
+  --grid: #2a2a27;
+
+  --text-primary: #ffffff;
+  --text-secondary: #c3c2b7;
+  --text-muted: #96958c;
+
+  --series-1: #3987e5;
+  --series-1-wash: rgba(57, 135, 229, 0.14);
+
+  --status-neutral: #6f6e66;
+
+  --shadow: 0 1px 2px rgba(0, 0, 0, 0.4), 0 1px 8px rgba(0, 0, 0, 0.24);
+}
+
+/* ---------------------------------------------------------------- reset */
+
+*,
+*::before,
+*::after {
+  box-sizing: border-box;
+}
+
+html,
+body {
+  margin: 0;
+  padding: 0;
+}
+
+body {
+  background: var(--bg);
+  color: var(--text-primary);
+  font-family: var(--font-sans);
+  font-size: 14px;
+  line-height: 1.5;
+  -webkit-font-smoothing: antialiased;
+}
+
+button {
+  font: inherit;
+  color: inherit;
+  cursor: pointer;
+}
+
+:focus-visible {
+  outline: 2px solid var(--series-1);
+  outline-offset: 2px;
+  border-radius: var(--radius-sm);
+}
+
+/* Screen-reader-only text: present in the accessibility tree, invisible on
+   screen. Used to give icon-only controls a real name. */
+.sr-only {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  padding: 0;
+  margin: -1px;
+  overflow: hidden;
+  clip: rect(0, 0, 0, 0);
+  white-space: nowrap;
+  border: 0;
+}
+
+/* --------------------------------------------------------------- layout */
+
+.app {
+  max-width: 1280px;
+  margin: 0 auto;
+  padding: 0 24px 64px;
+}
+
+.header {
+  display: flex;
+  align-items: center;
+  gap: 16px;
+  padding: 24px 0 20px;
+}
+
+.header__brand {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  margin-right: auto;
+}
+
+.header__mark {
+  font-size: 22px;
+  line-height: 1;
+}
+
+.header__title {
+  margin: 0;
+  font-size: 18px;
+  font-weight: 650;
+  letter-spacing: -0.01em;
+}
+
+.header__sub {
+  margin: 0;
+  font-size: 12px;
+  color: var(--text-muted);
+}
+
+/* Connection pill - tells you at a glance whether the API is reachable. */
+.pill {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  padding: 4px 10px;
+  border-radius: 999px;
+  border: 1px solid var(--border);
+  background: var(--surface-1);
+  font-size: 12px;
+  color: var(--text-secondary);
+  white-space: nowrap;
+}
+
+.pill__dot {
+  width: 7px;
+  height: 7px;
+  border-radius: 50%;
+  background: var(--status-neutral);
+  flex: none;
+}
+
+.pill--ok .pill__dot {
+  background: var(--status-good);
+}
+
+.pill--down .pill__dot {
+  background: var(--status-critical);
+}
+
+/* ------------------------------------------------------------- controls */
+
+.btn {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  padding: 7px 12px;
+  min-height: 34px;
+  border: 1px solid var(--border);
+  border-radius: var(--radius-sm);
+  background: var(--surface-1);
+  color: var(--text-primary);
+  font-size: 13px;
+  font-weight: 500;
+  transition: background 120ms ease, border-color 120ms ease;
+}
+
+.btn:hover:not(:disabled) {
+  background: var(--surface-hover);
+}
+
+.btn:disabled {
+  opacity: 0.55;
+  cursor: not-allowed;
+}
+
+.btn--primary {
+  background: var(--series-1);
+  border-color: var(--series-1);
+  color: #ffffff;
+}
+
+.btn--primary:hover:not(:disabled) {
+  filter: brightness(1.06);
+  background: var(--series-1);
+}
+
+.btn--icon {
+  padding: 7px 9px;
+}
+
+/* The single filter row. Per the dashboard rules there is exactly one, it
+   sits above everything it scopes, and every card below re-renders against
+   the same slice - so the numbers on screen always agree with each other. */
+.filterbar {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 10px;
+  padding: 0 0 20px;
+}
+
+.segmented {
+  display: inline-flex;
+  border: 1px solid var(--border);
+  border-radius: var(--radius-sm);
+  background: var(--surface-1);
+  overflow: hidden;
+}
+
+.segmented__btn {
+  padding: 6px 12px;
+  min-height: 32px;
+  border: 0;
+  background: transparent;
+  color: var(--text-secondary);
+  font-size: 13px;
+  transition: background 120ms ease;
+}
+
+.segmented__btn + .segmented__btn {
+  border-left: 1px solid var(--border);
+}
+
+.segmented__btn:hover {
+  background: var(--surface-hover);
+}
+
+.segmented__btn[aria-pressed='true'] {
+  background: var(--surface-2);
+  color: var(--text-primary);
+  font-weight: 600;
+}
+
+.filterbar__label {
+  font-size: 12px;
+  color: var(--text-muted);
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+}
+
+.filterbar__spacer {
+  margin-left: auto;
+}
+
+/* ------------------------------------------------------------ stat tiles */
+
+.kpi {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(180px, 1fr));
+  gap: 12px;
+  margin-bottom: 20px;
+}
+
+.tile {
+  padding: 16px;
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
+  background: var(--surface-1);
+  box-shadow: var(--shadow);
+}
+
+.tile__label {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  font-size: 12px;
+  color: var(--text-secondary);
+  margin-bottom: 6px;
+}
+
+/* Proportional figures on purpose: tabular-nums makes a large standalone
+   number like 121 look loose. Tabular is reserved for table columns. */
+.tile__value {
+  font-size: 28px;
+  font-weight: 650;
+  letter-spacing: -0.02em;
+  line-height: 1.1;
+}
+
+.tile__hint {
+  font-size: 12px;
+  color: var(--text-muted);
+  margin-top: 4px;
+}
+
+/* The hero figure: exactly one per view, >=48px, same sans as everything
+   else. It is the number the dashboard exists to show. */
+.tile--hero .tile__value {
+  font-size: 52px;
+  letter-spacing: -0.03em;
+}
+
+.tile--hero {
+  grid-column: span 1;
+}
+
+/* ----------------------------------------------------------- chart cards */
+
+.grid {
+  display: grid;
+  grid-template-columns: repeat(12, 1fr);
+  gap: 16px;
+}
+
+.span-6 {
+  grid-column: span 6;
+}
+
+.span-12 {
+  grid-column: span 12;
+}
+
+@media (max-width: 900px) {
+  .span-6 {
+    grid-column: span 12;
+  }
+}
+
+.card {
+  display: flex;
+  flex-direction: column;
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
+  background: var(--surface-1);
+  box-shadow: var(--shadow);
+  overflow: hidden;
+}
+
+.card__head {
+  display: flex;
+  align-items: flex-start;
+  gap: 12px;
+  padding: 16px 16px 8px;
+}
+
+.card__titles {
+  margin-right: auto;
+  min-width: 0;
+}
+
+.card__title {
+  margin: 0;
+  font-size: 14px;
+  font-weight: 620;
+}
+
+.card__sub {
+  margin: 2px 0 0;
+  font-size: 12px;
+  color: var(--text-muted);
+}
+
+/* The card body grows with its content rather than being pinned to a fixed
+   height - a fixed height is what causes an x-axis band to get cropped into
+   a tiny nested scrollbar. */
+.card__body {
+  padding: 8px 16px 16px;
+}
+
+/* Refetch holds the previous render at reduced opacity: no skeleton flash,
+   no layout jump, the frame stays put while numbers update. */
+.is-stale {
+  opacity: 0.55;
+  transition: opacity 160ms ease;
+}
+
+/* ---------------------------------------------------- legend / table view */
+
+.legend {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 14px;
+  padding: 0 0 8px;
+}
+
+.legend__item {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  font-size: 12px;
+  color: var(--text-secondary);
+}
+
+/* Legends mirror the mark: a rect for bars and areas, a short stroke for
+   lines. The colored swatch sits BESIDE the text - the text itself always
+   wears a text token, never the data color. */
+.legend__swatch {
+  width: 11px;
+  height: 11px;
+  border-radius: 3px;
+  flex: none;
+}
+
+.legend__swatch--line {
+  width: 14px;
+  height: 2px;
+  border-radius: 1px;
+}
+
+.tableview {
+  width: 100%;
+  border-collapse: collapse;
+  font-size: 13px;
+  font-variant-numeric: tabular-nums;
+}
+
+.tableview th,
+.tableview td {
+  padding: 6px 10px;
+  text-align: right;
+  border-bottom: 1px solid var(--border);
+}
+
+.tableview th:first-child,
+.tableview td:first-child {
+  text-align: left;
+  font-variant-numeric: normal;
+}
+
+.tableview thead th {
+  color: var(--text-secondary);
+  font-weight: 600;
+  font-size: 12px;
+}
+
+.tableview__wrap {
+  overflow-x: auto;
+  max-height: 320px;
+  overflow-y: auto;
+}
+
+/* -------------------------------------------------------------- tooltip */
+
+.tooltip {
+  border: 1px solid var(--border);
+  border-radius: var(--radius-sm);
+  background: var(--surface-1);
+  box-shadow: var(--shadow);
+  padding: 8px 10px;
+  font-size: 12px;
+  min-width: 150px;
+}
+
+.tooltip__head {
+  color: var(--text-secondary);
+  margin-bottom: 6px;
+  font-size: 11px;
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+}
+
+.tooltip__row {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 2px 0;
+}
+
+/* Line keys, not filled boxes: at tooltip density a solid block is
+   data-weight ink doing a label's job. */
+.tooltip__key {
+  width: 12px;
+  height: 2px;
+  border-radius: 1px;
+  flex: none;
+}
+
+.tooltip__name {
+  color: var(--text-secondary);
+  margin-right: auto;
+}
+
+/* Values lead, labels follow - the legend's hierarchy inverted, because
+   here the reader already knows the series and wants the number. */
+.tooltip__value {
+  color: var(--text-primary);
+  font-weight: 650;
+  font-variant-numeric: tabular-nums;
+}
+
+/* ---------------------------------------------------------- email table */
+
+.mailtable {
+  width: 100%;
+  border-collapse: collapse;
+  font-size: 13px;
+}
+
+.mailtable th {
+  position: sticky;
+  top: 0;
+  z-index: 1;
+  background: var(--surface-1);
+  text-align: left;
+  font-size: 12px;
+  font-weight: 600;
+  color: var(--text-secondary);
+  padding: 8px 10px;
+  border-bottom: 1px solid var(--border);
+  white-space: nowrap;
+}
+
+.mailtable td {
+  padding: 9px 10px;
+  border-bottom: 1px solid var(--border);
+  vertical-align: top;
+}
+
+.mailtable tbody tr {
+  cursor: pointer;
+  transition: background 100ms ease;
+}
+
+.mailtable tbody tr:hover,
+.mailtable tbody tr:focus-visible {
+  background: var(--surface-hover);
+}
+
+.mailtable__wrap {
+  overflow-x: auto;
+}
+
+.cell-subject {
+  max-width: 420px;
+  min-width: 220px;
+}
+
+.cell-subject__line {
+  display: block;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.cell-subject__from {
+  color: var(--text-muted);
+  font-size: 12px;
+}
+
+.cell-num {
+  text-align: right;
+  font-variant-numeric: tabular-nums;
+  white-space: nowrap;
+}
+
+.mono {
+  font-family: var(--font-mono);
+  font-size: 12px;
+}
+
+/* Verdict badge: icon + word + color, in that order of importance. Remove
+   the color and it still reads correctly - that is the requirement. */
+.badge {
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
+  padding: 2px 8px 2px 6px;
+  border-radius: 999px;
+  border: 1px solid var(--border);
+  background: var(--surface-2);
+  font-size: 12px;
+  font-weight: 550;
+  white-space: nowrap;
+}
+
+.badge__icon {
+  display: inline-flex;
+  flex: none;
+}
+
+/* Auth chips (SPF / DKIM / DMARC), same icon+word rule as badges. */
+.chips {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+}
+
+/* Table rows keep all three chips on one line. Wrapping them would triple
+   the height of every row and turn the list into a wall. */
+.chips--nowrap {
+  flex-wrap: nowrap;
+}
+
+.chip {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  padding: 2px 7px;
+  border-radius: var(--radius-sm);
+  border: 1px solid var(--border);
+  background: var(--surface-2);
+  font-size: 11px;
+  white-space: nowrap;
+}
+
+.chip__label {
+  color: var(--text-muted);
+  font-weight: 600;
+  letter-spacing: 0.02em;
+}
+
+/* Score meter: the fill carries severity, the track is a muted step of the
+   same surface so the state reads across the whole bar. */
+.meter {
+  width: 72px;
+  height: 6px;
+  border-radius: 3px;
+  background: var(--surface-2);
+  overflow: hidden;
+  display: inline-block;
+  vertical-align: middle;
+}
+
+/* display:block matters. The fill is a <span>, and height has no effect on
+   an inline box - the meter rendered as an empty track at every score
+   until this was set. */
+.meter__fill {
+  display: block;
+  height: 100%;
+  border-radius: 3px;
+}
+
+/* ---------------------------------------------------------- detail panel */
+
+.drawer__scrim {
+  position: fixed;
+  inset: 0;
+  background: rgba(11, 11, 11, 0.45);
+  z-index: 40;
+  animation: fade-in 140ms ease;
+}
+
+.drawer {
+  position: fixed;
+  top: 0;
+  right: 0;
+  bottom: 0;
+  width: min(560px, 100vw);
+  z-index: 41;
+  background: var(--surface-1);
+  border-left: 1px solid var(--border);
+  display: flex;
+  flex-direction: column;
+  animation: slide-in 180ms ease;
+}
+
+@keyframes fade-in {
+  from {
+    opacity: 0;
+  }
+}
+
+@keyframes slide-in {
+  from {
+    transform: translateX(16px);
+    opacity: 0;
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .drawer,
+  .drawer__scrim {
+    animation: none;
+  }
+}
+
+.drawer__head {
+  display: flex;
+  align-items: flex-start;
+  gap: 12px;
+  padding: 18px 20px 14px;
+  border-bottom: 1px solid var(--border);
+}
+
+.drawer__title {
+  margin: 0;
+  font-size: 15px;
+  font-weight: 620;
+  line-height: 1.35;
+  overflow-wrap: anywhere;
+}
+
+.drawer__body {
+  padding: 18px 20px 40px;
+  overflow-y: auto;
+  flex: 1;
+}
+
+.section {
+  margin-bottom: 24px;
+}
+
+.section__title {
+  margin: 0 0 10px;
+  font-size: 11px;
+  font-weight: 650;
+  text-transform: uppercase;
+  letter-spacing: 0.06em;
+  color: var(--text-muted);
+}
+
+.kv {
+  display: grid;
+  grid-template-columns: 108px 1fr;
+  gap: 6px 12px;
+  font-size: 13px;
+}
+
+.kv__k {
+  color: var(--text-muted);
+}
+
+.kv__v {
+  overflow-wrap: anywhere;
+}
+
+/* One finding = one row: what fired, how many points it added, and the
+   evidence. This is the explainability contract - a flagged message must
+   always be able to answer "why". */
+.finding {
+  display: flex;
+  gap: 10px;
+  padding: 10px 0;
+  border-bottom: 1px solid var(--border);
+}
+
+.finding:last-child {
+  border-bottom: 0;
+}
+
+.finding__weight {
+  flex: none;
+  min-width: 40px;
+  height: 22px;
+  padding: 0 8px;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  border-radius: var(--radius-sm);
+  background: var(--surface-2);
+  border: 1px solid var(--border);
+  font-size: 12px;
+  font-weight: 650;
+  font-variant-numeric: tabular-nums;
+}
+
+.finding__label {
+  font-weight: 550;
+}
+
+.finding__detail {
+  color: var(--text-secondary);
+  font-size: 12px;
+  overflow-wrap: anywhere;
+}
+
+.finding__code {
+  color: var(--text-muted);
+  font-family: var(--font-mono);
+  font-size: 11px;
+}
+
+.scorebar {
+  height: 8px;
+  border-radius: 4px;
+  background: var(--surface-2);
+  overflow: hidden;
+  margin: 8px 0 6px;
+}
+
+.scorebar__fill {
+  height: 100%;
+  border-radius: 4px;
+}
+
+/* ------------------------------------------------------- empty / errors */
+
+.empty {
+  padding: 32px 16px;
+  text-align: center;
+  color: var(--text-muted);
+  font-size: 13px;
+}
+
+.empty__title {
+  color: var(--text-secondary);
+  font-weight: 600;
+  margin-bottom: 4px;
+}
+
+.banner {
+  display: flex;
+  align-items: flex-start;
+  gap: 10px;
+  padding: 12px 14px;
+  margin-bottom: 16px;
+  border: 1px solid var(--border);
+  border-left: 3px solid var(--status-critical);
+  border-radius: var(--radius-sm);
+  background: var(--surface-1);
+  font-size: 13px;
+}
+
+.banner--info {
+  border-left-color: var(--series-1);
+}
+
+.banner__body {
+  margin-right: auto;
+}
+
+.banner__title {
+  font-weight: 600;
+  margin-bottom: 2px;
+}
+
+.banner__text {
+  color: var(--text-secondary);
+}
+
+.toast {
+  position: fixed;
+  left: 50%;
+  bottom: 24px;
+  transform: translateX(-50%);
+  z-index: 60;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 10px 16px;
+  border-radius: var(--radius);
+  border: 1px solid var(--border);
+  background: var(--surface-1);
+  box-shadow: var(--shadow);
+  font-size: 13px;
+  max-width: min(560px, calc(100vw - 32px));
+}
+
+.footer {
+  padding: 28px 0 0;
+  color: var(--text-muted);
+  font-size: 12px;
+  text-align: center;
+}
