@@ -58,3 +58,87 @@ def test_confidence_is_bounded():
     hit = check_domain("micrsoft.com")
     assert hit is not None
     assert 0.0 < hit.confidence <= 1.0
+
+
+# --- Regression: first-party infrastructure is not a typosquat -------------
+# The first live scan against a real inbox produced exactly two flags, and
+# both were false positives of this kind: legitimate Microsoft and Google
+# infrastructure domains flagged for containing their own brand name.
+
+import pytest
+
+from app.analysis import analyze
+from app.analysis.spoofing import legitimate_brand
+
+
+@pytest.mark.parametrize(
+    "domain,brand",
+    [
+        ("microsoftonline.com", "microsoft"),
+        ("login.microsoftonline.com", "microsoft"),
+        ("googleusercontent.com", "google"),
+        ("googleapis.com", "google"),
+        ("amazonaws.com", "amazon"),
+        ("fbcdn.net", "facebook"),
+        ("licdn.com", "linkedin"),
+        ("paypalobjects.com", "paypal"),
+    ],
+)
+def test_first_party_infrastructure_is_not_a_squat(domain, brand):
+    assert check_domain(domain) is None
+    assert legitimate_brand(domain) == brand
+
+
+def test_brand_linking_to_its_own_infrastructure_is_not_flagged():
+    """Real Microsoft mail links to microsoftonline.com. That is not
+    impersonation, and must not produce a typosquat_link finding."""
+    from app.analysis.message import ParsedMessage
+
+    msg = ParsedMessage(
+        gmail_id="ms1",
+        thread_id="t1",
+        headers={
+            "authentication-results": "mx.google.com; spf=pass; dkim=pass; dmarc=pass"
+        },
+        subject="Default Directory invited you to access applications",
+        from_address="invites@microsoft.com",
+        from_display="Microsoft Invitations",
+        from_domain="microsoft.com",
+        reply_to="",
+        reply_to_domain="",
+        to_address="me@gmail.com",
+        date_sent="",
+        body_text="Accept the invitation.",
+        body_html='<p><a href="https://login.microsoftonline.com/redeem">Accept</a></p>',
+        label_ids=[],
+    )
+    result = analyze(msg)
+    assert [f.code for f in result.findings] == []
+    assert result.verdict == "clean"
+
+
+def test_real_typosquat_link_still_flagged():
+    """The exemption must not disarm the check: a domain that really is
+    impersonating a brand the sender does not own still fires."""
+    from app.analysis.message import ParsedMessage
+
+    msg = ParsedMessage(
+        gmail_id="ph1",
+        thread_id="t1",
+        headers={
+            "authentication-results": "mx.google.com; spf=pass; dkim=pass; dmarc=pass"
+        },
+        subject="Account notice",
+        from_address="noreply@mailer.example.com",
+        from_display="Notices",
+        from_domain="mailer.example.com",
+        reply_to="",
+        reply_to_domain="",
+        to_address="me@gmail.com",
+        date_sent="",
+        body_text="Sign in.",
+        body_html='<p><a href="https://paypal-secure-login.example/go">Sign in</a></p>',
+        label_ids=[],
+    )
+    result = analyze(msg)
+    assert "typosquat_link" in [f.code for f in result.findings]

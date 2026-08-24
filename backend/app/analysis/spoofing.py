@@ -9,15 +9,35 @@ import tldextract
 
 from .message import ParsedMessage
 
-# Well-known brands frequently impersonated in phishing, with their legit
-# registered domains. Used for display-name and lookalike checks.
+# Well-known brands frequently impersonated in phishing, mapped to the
+# domains they legitimately own. Used for display-name and lookalike checks.
+#
+# These sets must include FIRST-PARTY INFRASTRUCTURE domains, not just the
+# domain a user would type. Real mail from Microsoft links to
+# microsoftonline.com; real mail from Google links to googleusercontent.com.
+# Both contain their brand as a token, so the combosquat rule flags them as
+# impersonation unless they are listed here as legitimate.
+#
+# This was not hypothetical: the first live scan against a real inbox
+# produced exactly two flags, and both were this false positive.
 BRAND_DOMAINS: dict[str, set[str]] = {
-    "paypal": {"paypal.com"},
-    "microsoft": {"microsoft.com", "outlook.com", "office.com", "live.com"},
-    "apple": {"apple.com", "icloud.com"},
-    "amazon": {"amazon.com"},
-    "google": {"google.com", "gmail.com"},
-    "netflix": {"netflix.com"},
+    "paypal": {"paypal.com", "paypalobjects.com"},
+    "microsoft": {
+        "microsoft.com", "outlook.com", "office.com", "live.com",
+        "microsoftonline.com", "microsoft365.com", "office365.com",
+        "sharepoint.com", "onedrive.com", "azure.com", "windows.net",
+        "azurewebsites.net", "msftauth.net", "skype.com", "msn.com",
+    },
+    "apple": {"apple.com", "icloud.com", "mzstatic.com"},
+    "amazon": {
+        "amazon.com", "amazonaws.com", "media-amazon.com",
+        "ssl-images-amazon.com", "amazontrust.com",
+    },
+    "google": {
+        "google.com", "gmail.com", "googleusercontent.com", "googleapis.com",
+        "gstatic.com", "googlemail.com", "youtube.com", "withgoogle.com",
+    },
+    "netflix": {"netflix.com", "nflxext.com", "nflximg.net", "nflxvideo.net"},
     "chase": {"chase.com"},
     "wellsfargo": {"wellsfargo.com"},
     "bankofamerica": {"bankofamerica.com"},
@@ -27,10 +47,26 @@ BRAND_DOMAINS: dict[str, set[str]] = {
     "ups": {"ups.com"},
     "usps": {"usps.com"},
     "coinbase": {"coinbase.com"},
-    "instagram": {"instagram.com"},
-    "facebook": {"facebook.com", "fb.com"},
-    "linkedin": {"linkedin.com"},
+    "instagram": {"instagram.com", "cdninstagram.com"},
+    "facebook": {"facebook.com", "fb.com", "fbcdn.net", "messenger.com"},
+    "linkedin": {"linkedin.com", "licdn.com"},
 }
+
+
+def legitimate_brand(domain: str) -> str | None:
+    """Return the brand that legitimately owns `domain`, or None.
+
+    Used to recognise a brand's own infrastructure. The registrable domain is
+    compared, so a subdomain like `login.microsoftonline.com` resolves to
+    `microsoftonline.com` and matches.
+    """
+    if not domain:
+        return None
+    reg = _registered(domain)
+    for brand, legit in BRAND_DOMAINS.items():
+        if reg in legit:
+            return brand
+    return None
 
 _EMAIL_IN_TEXT = re.compile(r"[\w.+-]+@([\w.-]+\.\w+)")
 

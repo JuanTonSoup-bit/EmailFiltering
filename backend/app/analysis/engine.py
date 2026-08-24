@@ -18,7 +18,7 @@ from ..config import settings
 from .auth import parse_auth_results
 from .language import analyze_language
 from .message import ParsedMessage
-from .spoofing import analyze_spoofing
+from .spoofing import analyze_spoofing, legitimate_brand
 from .typosquat import check_domain
 from .urls import analyze_urls
 
@@ -113,14 +113,25 @@ def analyze(msg: ParsedMessage) -> AnalysisResult:
         add("lookalike_domain", "Lookalike sender domain", 30,
             spoof.lookalike_brand)
 
+    # A brand linking to its OWN infrastructure is not impersonation, even
+    # when that infrastructure domain contains the brand name (microsoft.com
+    # -> microsoftonline.com, google.com -> googleusercontent.com). The
+    # BRAND_DOMAINS list covers the common cases directly, but it can never be
+    # exhaustive, so this check makes the sender's own brand exempt no matter
+    # which infrastructure domain it reaches for.
+    sender_brand = legitimate_brand(msg.from_domain) if msg.from_domain else None
+
     for link_domain in sorted(urls.domains):
         if link_domain == msg.from_domain:
             continue
         link_squat = check_domain(link_domain)
-        if link_squat:
-            add("typosquat_link", "Link domain impersonates a brand", 25,
-                link_squat.describe())
-            break
+        if not link_squat:
+            continue
+        if sender_brand and link_squat.brand == sender_brand:
+            continue
+        add("typosquat_link", "Link domain impersonates a brand", 25,
+            link_squat.describe())
+        break
 
     # --- Language --------------------------------------------------------
     lang = analyze_language(msg.subject, msg.body_text)
