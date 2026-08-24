@@ -150,3 +150,39 @@ def test_scan_without_credentials_fails_loudly_but_does_not_kill_the_app(
         client.post("/api/scan")
 
     assert client.get("/api/health").status_code == 200
+
+
+# --- Unattended contexts must never open a browser -------------------------
+
+def test_gmail_client_defaults_to_non_interactive():
+    """The poller and /api/scan construct GmailClient() with no arguments.
+    If that default ever flips to interactive, a logon-started server would
+    pop an OAuth consent window at every sign-in."""
+    import inspect
+
+    from app.gmail.client import GmailClient
+
+    default = inspect.signature(GmailClient.__init__).parameters["interactive"].default
+    assert default is False
+
+
+def test_non_interactive_auth_raises_actionable_error(monkeypatch):
+    from app.gmail import auth
+
+    # No token file, no chance of refreshing: the unattended path must raise
+    # rather than reach InstalledAppFlow.
+    monkeypatch.setattr(auth.settings, "gmail_token_file", "definitely-not-here.json")
+    # A client secret that DOES exist, so we get past the missing-credentials
+    # branch and reach the interactive/non-interactive decision.
+    monkeypatch.setattr(auth.os.path, "exists", lambda p: p != "definitely-not-here.json")
+
+    def explode(*args, **kwargs):  # pragma: no cover - must never run
+        raise AssertionError("interactive OAuth flow was started unattended")
+
+    monkeypatch.setattr(auth.InstalledAppFlow, "from_client_secrets_file", explode)
+
+    with pytest.raises(RuntimeError) as excinfo:
+        auth.get_credentials(interactive=False)
+
+    # The message has to tell you what to actually do about it.
+    assert "get_credentials" in str(excinfo.value)

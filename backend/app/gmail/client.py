@@ -36,8 +36,12 @@ def _b64url_decode(data: str) -> str:
 
 
 class GmailClient:
-    def __init__(self) -> None:
-        creds = get_credentials()
+    def __init__(self, interactive: bool = False) -> None:
+        """Defaults to non-interactive: every programmatic caller (the poller,
+        the /api/scan endpoint) runs inside a background server that must not
+        pop a browser consent window. The one-time sign-in is a deliberate,
+        separate step -- see app/gmail/auth.py."""
+        creds = get_credentials(interactive=interactive)
         self.service = build("gmail", "v1", credentials=creds, cache_discovery=False)
         self._label_cache: dict[str, str] = {}
 

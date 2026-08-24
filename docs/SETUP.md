@@ -180,6 +180,54 @@ Check Gmail: flagged messages now carry a `PhishGuard/Suspicious` or
 
 ---
 
+## Running it without a terminal
+
+Once it works, you shouldn't have to start it by hand.
+
+```powershell
+cd C:\Users\Juan\EmailFiltering\scripts
+.\Install-Autostart.ps1
+Start-ScheduledTask -TaskName PhishGuard    # start now, don't wait for a reboot
+```
+
+That registers a per-user Scheduled Task (no admin rights, nothing
+machine-wide) which starts the server 30 seconds after logon, and adds a
+desktop shortcut that opens the dashboard.
+
+Then load `extension/` as an unpacked Chrome extension — `chrome://extensions/`
+→ Developer mode → Load unpacked — for a toolbar badge showing what's been
+flagged, plus **Scan now** and **Open dashboard** buttons.
+
+**The extension cannot start the server**, and no extension can: Chrome's
+sandbox has no API for spawning a local process. The only workaround is a
+registered native-messaging host, which is a lot of moving parts to solve a
+problem the logon task solves better — with the server always up, there is
+nothing to launch.
+
+Full details: [scripts/README.md](../scripts/README.md) and
+[extension/README.md](../extension/README.md).
+
+### The one-time sign-in is separate on purpose
+
+The poller and `/api/scan` construct their Gmail client **non-interactively**:
+if there is no usable token they raise an error telling you to sign in, rather
+than opening a browser.
+
+That matters once the server autostarts. An OAuth consent window appearing
+unbidden thirty seconds after every logon is both alarming and useless —
+nobody knows what launched it, and clicking through it is precisely the reflex
+an anti-phishing tool should not be training. So signing in stays a deliberate,
+explicit command:
+
+```powershell
+cd C:\Users\Juan\EmailFiltering\backend
+.venv\Scripts\python.exe -c "from app.gmail.auth import get_credentials; get_credentials()"
+```
+
+Refreshing an *existing* token is still automatic — that is non-interactive by
+nature, and is what keeps a signed-in install working without you thinking
+about it.
+
 ## Development mode
 
 For working on the frontend, run the two servers separately so you get hot

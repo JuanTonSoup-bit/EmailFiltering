@@ -65,6 +65,26 @@ findings are the ones the engine actually produces.
 
 ---
 
+## Running it without a terminal
+
+```powershell
+cd scripts
+.\Install-Autostart.ps1
+```
+
+Registers a per-user logon task so the server is always up, and puts a
+**PhishGuard** shortcut on your desktop. After that there is nothing to start
+— the dashboard is just there at `localhost:8000`.
+
+Load `extension/` as an unpacked Chrome extension for a toolbar badge showing
+what's been flagged, a **Scan now** button, and one-click access to the
+dashboard. Note that the extension does *not* launch the server: Chrome
+extensions cannot spawn local processes, which is exactly why the logon task
+exists. See [extension/README.md](extension/README.md) and
+[scripts/README.md](scripts/README.md).
+
+---
+
 ## What it detects
 
 | Category | Signals |

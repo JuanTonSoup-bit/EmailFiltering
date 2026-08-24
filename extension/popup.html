@@ -1,0 +1,78 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <link rel="stylesheet" href="popup.css" />
+    <title>PhishGuard</title>
+  </head>
+  <body>
+    <header class="head">
+      <img src="icons/icon32.png" alt="" width="20" height="20" />
+      <span class="head__name">PhishGuard</span>
+      <span class="pill" id="pill"><span class="pill__dot"></span><span id="pillText">Checking…</span></span>
+    </header>
+
+    <!-- Shown when the API answers -->
+    <section id="live" hidden>
+      <div class="stats">
+        <div class="stat stat--hero">
+          <div class="stat__label">Flagged</div>
+          <div class="stat__value" id="flagged">–</div>
+        </div>
+        <div class="stat">
+          <div class="stat__label">Suspicious</div>
+          <div class="stat__value" id="suspicious">–</div>
+        </div>
+        <div class="stat">
+          <div class="stat__label">Junk</div>
+          <div class="stat__value" id="junk">–</div>
+        </div>
+        <div class="stat">
+          <div class="stat__label">Scanned</div>
+          <div class="stat__value" id="scanned">–</div>
+        </div>
+      </div>
+
+      <div class="section-label" id="recentLabel" hidden>Recently flagged</div>
+      <ul class="recent" id="recent"></ul>
+
+      <div class="actions">
+        <button id="open" class="btn btn--primary">Open dashboard</button>
+        <button id="scan" class="btn">Scan now</button>
+      </div>
+      <p class="foot" id="foot"></p>
+    </section>
+
+    <!-- Shown when it isn't reachable -->
+    <section id="down" hidden>
+      <p class="down__title">Server not reachable</p>
+      <p class="down__body">
+        Nothing is answering on port <b id="downPort">8000</b>. If PhishGuard is
+        set up to start at logon it may still be booting — give it a few
+        seconds.
+      </p>
+      <p class="down__body">Otherwise start it yourself — run this from the repo:</p>
+      <code class="cmd" id="cmd">powershell -ExecutionPolicy Bypass -File .\scripts\Start-PhishGuard.ps1</code>
+      <div class="actions">
+        <button id="copy" class="btn btn--primary">Copy command</button>
+        <button id="retry" class="btn">Retry</button>
+      </div>
+    </section>
+
+    <details class="settings">
+      <summary>Settings</summary>
+      <label class="field">
+        <span>Port</span>
+        <input type="number" id="port" min="1" max="65535" />
+      </label>
+      <label class="field">
+        <span>Window (days)</span>
+        <input type="number" id="days" min="1" max="90" />
+      </label>
+      <button id="save" class="btn btn--small">Save</button>
+      <span class="saved" id="saved" hidden>Saved</span>
+    </details>
+
+    <script src="popup.js"></script>
+  </body>
+</html>

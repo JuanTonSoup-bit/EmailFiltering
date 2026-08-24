@@ -1,0 +1,275 @@
+/* PhishGuard popup.
+   Same token approach as the dashboard: roles, not hex values, so the
+   light/dark swap is one block rather than a change in every rule. */
+
+:root {
+  color-scheme: light;
+  --bg: #fcfcfb;
+  --surface: #f4f3f0;
+  --border: #e0ded8;
+  --text: #0b0b0b;
+  --text-2: #52514e;
+  --muted: #78766f;
+  --accent: #2a78d6;
+  --good: #0ca30c;
+  --warning: #fab219;
+  --critical: #d03b3b;
+  --neutral: #9a988f;
+}
+
+@media (prefers-color-scheme: dark) {
+  :root {
+    color-scheme: dark;
+    --bg: #1a1a19;
+    --surface: #232321;
+    --border: #2e2e2b;
+    --text: #ffffff;
+    --text-2: #c3c2b7;
+    --muted: #96958c;
+    --accent: #3987e5;
+    --neutral: #6f6e66;
+  }
+}
+
+* { box-sizing: border-box; }
+
+body {
+  width: 320px;
+  margin: 0;
+  padding: 12px;
+  background: var(--bg);
+  color: var(--text);
+  font: 13px/1.45 ui-sans-serif, system-ui, "Segoe UI", Roboto, sans-serif;
+}
+
+/* ------------------------------------------------------------------ head */
+
+.head {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  margin-bottom: 12px;
+}
+
+.head__name {
+  font-weight: 650;
+  font-size: 14px;
+  margin-right: auto;
+}
+
+.pill {
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
+  padding: 2px 8px;
+  border: 1px solid var(--border);
+  border-radius: 999px;
+  font-size: 11px;
+  color: var(--text-2);
+}
+
+.pill__dot {
+  width: 6px;
+  height: 6px;
+  border-radius: 50%;
+  background: var(--neutral);
+}
+
+.pill--ok .pill__dot { background: var(--good); }
+.pill--down .pill__dot { background: var(--critical); }
+
+/* ----------------------------------------------------------------- stats */
+
+.stats {
+  display: grid;
+  grid-template-columns: repeat(4, 1fr);
+  gap: 6px;
+  margin-bottom: 12px;
+}
+
+.stat {
+  padding: 8px 6px;
+  border: 1px solid var(--border);
+  border-radius: 8px;
+  background: var(--surface);
+  text-align: center;
+}
+
+.stat__label {
+  font-size: 10px;
+  color: var(--muted);
+  margin-bottom: 2px;
+  white-space: nowrap;
+}
+
+.stat__value {
+  font-size: 17px;
+  font-weight: 650;
+  line-height: 1.1;
+}
+
+.stat--hero .stat__value { font-size: 21px; }
+
+/* ---------------------------------------------------------------- recent */
+
+.section-label {
+  font-size: 10px;
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+  color: var(--muted);
+  margin-bottom: 6px;
+}
+
+.recent {
+  list-style: none;
+  margin: 0 0 12px;
+  padding: 0;
+}
+
+.recent__item {
+  display: flex;
+  gap: 7px;
+  padding: 6px 0;
+  border-bottom: 1px solid var(--border);
+}
+
+.recent__item:last-child { border-bottom: 0; }
+
+/* The severity marker is a bar, not a coloured word: colour never has to
+   carry the meaning on its own, and the verdict is spelled out beside it. */
+.recent__bar {
+  width: 3px;
+  border-radius: 2px;
+  flex: none;
+}
+
+.recent__bar--suspicious { background: var(--critical); }
+.recent__bar--junk { background: var(--warning); }
+
+.recent__body { min-width: 0; }
+
+.recent__subject {
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  font-size: 12px;
+}
+
+.recent__meta {
+  font-size: 11px;
+  color: var(--muted);
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+/* --------------------------------------------------------------- actions */
+
+.actions {
+  display: flex;
+  gap: 6px;
+}
+
+.btn {
+  flex: 1;
+  padding: 7px 10px;
+  border: 1px solid var(--border);
+  border-radius: 6px;
+  background: var(--surface);
+  color: var(--text);
+  font: inherit;
+  font-size: 12px;
+  font-weight: 500;
+  cursor: pointer;
+}
+
+.btn:hover:not(:disabled) { filter: brightness(0.97); }
+.btn:disabled { opacity: 0.55; cursor: default; }
+
+.btn--primary {
+  background: var(--accent);
+  border-color: var(--accent);
+  color: #fff;
+}
+
+.btn--small { flex: none; padding: 5px 10px; }
+
+.foot {
+  margin: 8px 0 0;
+  font-size: 11px;
+  color: var(--muted);
+  min-height: 15px;
+}
+
+/* ------------------------------------------------------------------ down */
+
+.down__title {
+  margin: 0 0 6px;
+  font-weight: 600;
+  color: var(--critical);
+}
+
+.down__body {
+  margin: 0 0 8px;
+  font-size: 12px;
+  color: var(--text-2);
+}
+
+.cmd {
+  display: block;
+  padding: 7px 8px;
+  margin-bottom: 10px;
+  border: 1px solid var(--border);
+  border-radius: 6px;
+  background: var(--surface);
+  font-family: ui-monospace, Consolas, monospace;
+  font-size: 10px;
+  line-height: 1.4;
+  word-break: break-all;
+  color: var(--text-2);
+}
+
+/* -------------------------------------------------------------- settings */
+
+.settings {
+  margin-top: 12px;
+  padding-top: 10px;
+  border-top: 1px solid var(--border);
+  font-size: 12px;
+}
+
+.settings summary {
+  cursor: pointer;
+  color: var(--muted);
+  font-size: 11px;
+}
+
+.field {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  margin: 8px 0;
+}
+
+.field span {
+  width: 92px;
+  color: var(--text-2);
+  font-size: 12px;
+}
+
+.field input {
+  flex: 1;
+  padding: 5px 7px;
+  border: 1px solid var(--border);
+  border-radius: 5px;
+  background: var(--bg);
+  color: var(--text);
+  font: inherit;
+  font-size: 12px;
+}
+
+.saved {
+  margin-left: 8px;
+  font-size: 11px;
+  color: var(--good);
+}
