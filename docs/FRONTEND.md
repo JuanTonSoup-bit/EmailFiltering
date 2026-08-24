@@ -260,6 +260,34 @@ way a sort control would. Putting it in the global row would imply the charts
 respond to it, which they do not and should not; the point of the charts is
 the *mix* of verdicts.
 
+### Destructive controls arm before they fire
+
+**Stop** sits in the filter row beside Scan now, and takes two clicks: the
+first arms it (turns critical, label changes to "Confirm stop"), the second
+fires. It disarms itself after four seconds.
+
+The friction is deliberate. A misclick would switch the mail filter off, and
+**nothing in the browser can turn it back on** — extensions cannot spawn local
+processes. The label changes along with the colour, so the warning does not
+depend on seeing red.
+
+Stopping is also the one place the app distinguishes two states that look
+identical over HTTP: "you turned it off" gets a **PhishGuard stopped** banner
+explaining how to restart, while "it went away unexpectedly" keeps the generic
+unreachable error. Same symptom, different message, because the reader needs
+different things from each.
+
+### Writes carry a header, reads do not
+
+`api/client.js` sends `X-PhishGuard-Client` on `triggerScan` and `stopServer`.
+The value is irrelevant; its presence forces a CORS preflight, which the
+backend's origin allowlist refuses for third-party pages. Without it, any
+website you visited could POST to your local API. See
+[BACKEND.md](BACKEND.md) for the full reasoning.
+
+`request()` merges caller headers over its defaults rather than spreading them
+— passing `headers` would otherwise silently replace the default `Accept`.
+
 ### Refetch keeps the frame
 
 Background refreshes hold the previous render at reduced opacity. No skeleton

@@ -370,7 +370,18 @@ Wraps the Gmail API.
 
 ### `app/scanner.py`
 
-One scan cycle: list, skip already-seen, fetch, analyse, label, persist.
+One scan cycle: walk ids, skip already-seen, fetch, analyse, label, persist.
+
+**The id stream is paginated and the analysis budget is separate.**
+`client.iter_message_ids()` follows Gmail's `nextPageToken` across pages;
+`scan_once` consumes that stream until it has analysed `POLL_MAX_RESULTS`
+messages it has not seen before, then stops and resumes there next cycle.
+
+Getting this wrong is subtle and was a real bug: capping the *id list* rather
+than the *analysis count* meant requesting the newest N every cycle, finding
+all N already in the database, and reporting "0 new" indefinitely. A mailbox
+with 800 messages in the window would sit permanently at 25 scanned, with no
+error and nothing in the logs to suggest anything was wrong.
 
 The critical detail is the `try/except` around labelling:
 
@@ -442,6 +453,11 @@ The five endpoints, plus lifespan and static file serving.
 | `GET /api/emails?verdict=&days=&limit=&offset=` | Scanned messages, newest first. |
 | `GET /api/emails/{id}` | One message with its findings. |
 | `POST /api/scan` | Run a scan cycle now instead of waiting for the poller. |
+| `POST /api/shutdown` | Stop the server. Backs the Stop button in the dashboard and extension. |
+
+Both POST endpoints sit behind `require_client_header` (see
+`app/api/guards.py` below). GET endpoints are deliberately unguarded so curl
+and the address bar stay usable.
 
 `lifespan` is the modern replacement for `@app.on_event("startup")`: code
 before `yield` runs at startup, code after runs at shutdown, and the `finally`
@@ -450,6 +466,26 @@ guarantees the poller is stopped even on an unclean exit.
 The static mount is last, so `/api/*` always wins over the frontend's routes,
 and it is conditional on `frontend/dist` existing — the API works fine before
 the frontend has ever been built.
+
+### `app/api/guards.py`
+
+One dependency, `require_client_header`, applied to both POST endpoints.
+
+The API has no authentication, which is fine for reads. Writes are different:
+a browser will send a cross-origin POST to `127.0.0.1` from **any page you
+happen to be visiting**, and with `mode: 'no-cors'` the response is unreadable
+to the attacker but *the request still arrives*. Without a guard, any website
+could trigger scans or silently switch the filter off.
+
+Requiring a custom header is the fix, because a custom header is exactly what
+forces the browser to send a CORS preflight first — and the preflight is
+checked against this app's origin allowlist. A page on someone else's site
+gets its preflight refused and the real request is never sent. Pages cannot
+opt out; it is enforced by the browser.
+
+It is not authentication and does not pretend to be. Anything already running
+locally can set a header. It closes the specific hole where a *remote web
+page* drives your local API.
 
 ### `app/tools/`
 
@@ -470,7 +506,7 @@ cd backend
 .venv/bin/python -m pytest -q         # macOS / Linux
 ```
 
-52 tests, roughly one second. They cover the scoring engine and each analyser,
+56 tests, roughly one second. They cover the scoring engine and each analyser,
 typosquat technique classification, `.eml` parsing, every dashboard aggregate
 including the window semantics, and every API endpoint including its failure
 modes (out-of-range `days` → 422, unknown verdict → 422, missing id → 404,

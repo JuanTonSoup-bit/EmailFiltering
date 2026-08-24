@@ -146,7 +146,7 @@ python -m app.tools.scan_eml --domain paypa1-secure.com
 ## Tests
 
 ```bash
-cd backend && pytest -q     # 52 tests, ~1 second
+cd backend && pytest -q     # 56 tests, ~1 second
 ```
 
 Covers the scoring engine and each analyser, typosquat classification, `.eml`
@@ -165,4 +165,4 @@ not inspect attachments. It is a smoke detector, not a security guard.
 The API has **no authentication** and is meant to bind to localhost. See
 [docs/SETUP.md § A word on exposure](docs/SETUP.md#a-word-on-exposure).
 
-Full discussion: [docs/DETECTION.md § Honest limitations](docs/DETECTION.md#part-5--honest-limitations).
+Full discussion: [docs/DETECTION.md § Honest limitations](docs/DETECTION.md#part-6--honest-limitations).

@@ -358,7 +358,86 @@ realistic mix.
 
 ---
 
-## Part 5 — Honest limitations
+## Part 5 — What real mail actually did to it
+
+Synthetic test data tells you the engine works. Real mail tells you what it
+gets wrong. Two rounds against a live inbox, recorded here because the failure
+modes are more instructive than the successes.
+
+### Round one: 11 messages, 2 flagged, both wrong
+
+Both flags were `typosquat_link`:
+
+| Sender | Link | Flagged as |
+|---|---|---|
+| `microsoft.com` | `microsoftonline.com` | impersonating *microsoft* |
+| `google.com` | `googleusercontent.com` | impersonating *google* |
+
+Both are the brand's **own infrastructure**. The combosquat rule fires on
+"brand name embedded in a longer domain", which those are — legitimately.
+
+Fixed two ways: first-party infrastructure domains were added to
+`BRAND_DOMAINS`, and because that list can never be exhaustive, a sender is
+now exempt from link-typosquat findings against **its own** brand. Four
+regression tests cover it.
+
+### Round two: 822 messages, 81 flagged, 10 suspicious — all 10 still wrong
+
+A larger window exposed two *systematic* false-positive sources that remain
+open:
+
+**1. Click-tracking redirects trip `url_mismatch` (65 occurrences).**
+Newsletters route links through their own tracking domain while displaying the
+publisher's name:
+
+```
+anchor text: tldr.tech      href: tldrnewsletter.com     -> +25
+anchor text: playstation.com href: playstationemail.com   -> +25
+```
+
+This is the single most common signal in the whole corpus, and in this inbox
+it was **never** phishing. It is also a genuine phishing technique, which is
+what makes it hard: the mechanism is identical, only the intent differs.
+
+**2. Brand-owned alternate domains trip `typosquat_*` (11 occurrences).**
+
+| Domain | Flagged as | Reality |
+|---|---|---|
+| `amazon.jobs` | tld_swap of *amazon* | Amazon's careers site |
+| `google.dev` | tld_swap of *google* | Google's developer site |
+| `googleblog.com` | combo of *google* | Google's blog |
+| `microsoft.ai` | tld_swap of *microsoft* | linked news article |
+
+The `tld_swap` rule assumes a brand label under an unexpected TLD is hostile.
+Large companies own dozens of TLDs, so that assumption is wrong often.
+
+### What this tells you
+
+**Precision on this corpus was 0%.** 822 messages, 81 flags, zero real
+phishing. Two honest readings, and both are true:
+
+- The inbox genuinely contained no phishing, so there were no true positives
+  *available* to find. A 0% rate over a corpus with zero positives says
+  nothing about recall.
+- The false-positive rate is nonetheless too high to leave alone. 10
+  "suspicious" verdicts a month, all wrong, trains you to ignore the label —
+  which is the precise failure that makes a filter worse than none.
+
+This is why the label-only design matters: a month of 100%-wrong verdicts cost
+nothing but labels. Had it been deleting or archiving, the same tuning
+exercise would have meant lost mail.
+
+Candidate fixes, not yet applied:
+
+- Treat an anchor/href mismatch as weak (10) when the href domain's mail
+  authenticates and aligns with the From domain — a tracker on authenticated
+  bulk mail is not the same as a link swap on unauthenticated mail.
+- Extend `BRAND_DOMAINS` with brand-owned alternate TLDs, and drop `tld_swap`
+  confidence for TLDs large brands actually use (`.dev`, `.jobs`, `.ai`).
+- Require a second, independent signal before `typosquat_link` alone can push
+  a message to `suspicious`.
+
+## Part 6 — Honest limitations
 
 **What this catches well:** mass-mailed commodity phishing. Failed
 authentication, brand impersonation in display names, lookalike domains,

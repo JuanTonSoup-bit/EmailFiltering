@@ -172,8 +172,10 @@ immediately, press **Scan now** in the dashboard, or:
 curl -X POST -H "X-PhishGuard-Client: cli" http://localhost:8000/api/scan
 ```
 
-First run scans mail from the last `INITIAL_LOOKBACK_DAYS` days (default 3),
-up to `POLL_MAX_RESULTS` messages (default 25).
+First run scans mail from the last `INITIAL_LOOKBACK_DAYS` days (default 3).
+Each cycle analyses at most `POLL_MAX_RESULTS` *new* messages (default 100)
+and picks up where it left off next time, so a large backlog drains over
+several cycles rather than being truncated.
 
 Check Gmail: flagged messages now carry a `PhishGuard/Suspicious` or
 `PhishGuard/Junk` label, still sitting in the inbox.
@@ -256,7 +258,7 @@ Everything lives in `backend/.env`. Restart the server after changing it.
 | `SUSPICIOUS_THRESHOLD` | `50` | Score at or above this → `PhishGuard/Suspicious` |
 | `JUNK_THRESHOLD` | `25` | Score at or above this → `PhishGuard/Junk` |
 | `POLL_INTERVAL_SECONDS` | `120` | How often the inbox is checked |
-| `POLL_MAX_RESULTS` | `25` | Max messages fetched per cycle |
+| `POLL_MAX_RESULTS` | `100` | Max **new** messages analysed per cycle. Listing ids is paginated and cheap, so this bounds analysis work, not how far back a scan can see. |
 | `INITIAL_LOOKBACK_DAYS` | `3` | How far back the Gmail query reaches |
 | `LABEL_SUSPICIOUS` | `PhishGuard/Suspicious` | Label for likely phishing |
 | `LABEL_JUNK` | `PhishGuard/Junk` | Label for bulk/spam |
@@ -276,7 +278,7 @@ cd backend
 pytest -q
 ```
 
-Expect **52 passed**. No test touches the network or your real database.
+Expect **56 passed**. No test touches the network or your real database.
 
 Offline detection check, no credentials needed:
 

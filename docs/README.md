@@ -1,6 +1,6 @@
 # PhishGuard documentation
 
-Four documents. Start wherever matches what you need.
+Five documents. Start wherever matches what you need.
 
 | | |
 |---|---|
@@ -10,9 +10,17 @@ Four documents. Start wherever matches what you need.
 | **[DETECTION.md](DETECTION.md)** | SPF, DKIM, and DMARC explained from first principles. Every detection signal, its weight and the reasoning behind it, how to tune, and honest limitations. |
 | **[FRONTEND.md](FRONTEND.md)** | What React, Vite, and Recharts each do and why they are here, how the dashboard is organised, and the visual-design rules it follows. |
 
+Two more live next to the code they describe:
+
+| | |
+|---|---|
+| **[../scripts/README.md](../scripts/README.md)** | The launcher scripts and the logon task — running PhishGuard without a terminal. |
+| **[../extension/README.md](../extension/README.md)** | The Chrome extension: what it shows, what each permission is for, and why it cannot start the server. |
+
 ## Suggested reading order
 
-**To use it:** SETUP → DETECTION (part 4, tuning).
+**To use it:** SETUP → DETECTION (part 4, tuning) → DETECTION part 5 for what
+real mail actually did to the detector.
 
 **To understand it:** ARCHITECTURE → DETECTION → BACKEND → FRONTEND.
 

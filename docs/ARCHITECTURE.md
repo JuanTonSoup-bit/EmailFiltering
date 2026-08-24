@@ -162,11 +162,21 @@ code path (`fetch('/api/...')`) is identical in both.
 2. It calls `Scanner.scan_once()` via `asyncio.to_thread` — the Google client
    library is blocking, and running it directly on the event loop would stall
    every HTTP request for the duration of the scan.
-3. `scan_once` asks Gmail for message IDs matching
-   `in:inbox newer_than:{INITIAL_LOOKBACK_DAYS}d`.
+3. `scan_once` walks Gmail's message IDs matching
+   `in:inbox newer_than:{INITIAL_LOOKBACK_DAYS}d`, **following pagination**
+   via `iter_message_ids`.
 4. For each ID **not already in the database** (checked by the unique
    `gmail_id` column), it fetches the full message and converts the Gmail JSON
-   into a `ParsedMessage`.
+   into a `ParsedMessage`. It stops after analysing `POLL_MAX_RESULTS` *new*
+   messages and resumes from there next cycle.
+
+   > **This split matters.** `POLL_MAX_RESULTS` bounds how many messages are
+   > *analysed*, not how many ids are *fetched*. An earlier version capped the
+   > id list instead, which meant asking Gmail for the newest N every cycle,
+   > finding them all already scanned, and reporting "0 new" forever — so
+   > anything older than the newest N was permanently unreachable. Listing ids
+   > is cheap and paginated; fetching and analysing messages is the expensive
+   > part, and that is what deserves a budget.
 5. `analyze(msg)` runs every analyser and returns score, verdict, findings,
    and the three authentication results.
 6. If the verdict is `junk` or `suspicious`, the label is applied. **Labelling
