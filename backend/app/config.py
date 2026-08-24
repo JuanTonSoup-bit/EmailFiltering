@@ -17,7 +17,7 @@ class Settings(BaseSettings):
 
     # Poller
     poll_interval_seconds: int = 120
-    poll_max_results: int = 25
+    poll_max_results: int = 100
     initial_lookback_days: int = 3
 
     # Scoring thresholds (0-100)

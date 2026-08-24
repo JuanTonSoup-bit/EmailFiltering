@@ -47,14 +47,53 @@ class GmailClient:
 
     # -- Message listing / fetching --------------------------------------
 
+    # Gmail's hard per-page maximum. Asking for more is silently capped.
+    _PAGE_SIZE = 500
+
+    def iter_message_ids(self, query: str, hard_limit: int = 2000):
+        """Yield every message id matching `query`, following pagination.
+
+        The single-page version this replaced was a real bug: it asked for the
+        newest N ids and stopped. Once those N were scanned, every later cycle
+        got the same N back, found them all already in the database, and
+        reported "0 new" forever -- so anything older than the newest N was
+        permanently unreachable, and a backlog could never be worked through.
+
+        `hard_limit` is a safety bound, not a target: it stops a careless
+        query (`in:anywhere` on a decade-old mailbox) from walking hundreds of
+        pages. Callers decide how much of this stream to actually consume.
+        """
+        token = None
+        seen = 0
+        while True:
+            request = {
+                "userId": "me",
+                "q": query,
+                "maxResults": min(self._PAGE_SIZE, hard_limit - seen),
+            }
+            if token:
+                request["pageToken"] = token
+
+            resp = self.service.users().messages().list(**request).execute()
+
+            for message in resp.get("messages", []):
+                yield message["id"]
+                seen += 1
+                if seen >= hard_limit:
+                    return
+
+            token = resp.get("nextPageToken")
+            if not token:
+                return
+
     def list_message_ids(self, query: str, max_results: int) -> list[str]:
-        resp = (
-            self.service.users()
-            .messages()
-            .list(userId="me", q=query, maxResults=max_results)
-            .execute()
-        )
-        return [m["id"] for m in resp.get("messages", [])]
+        """The first `max_results` ids matching `query`, across pages."""
+        ids: list[str] = []
+        for message_id in self.iter_message_ids(query, hard_limit=max_results):
+            ids.append(message_id)
+            if len(ids) >= max_results:
+                break
+        return ids
 
     def get_message(self, message_id: str) -> ParsedMessage:
         raw = (
