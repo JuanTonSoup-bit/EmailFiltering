@@ -146,7 +146,7 @@ python -m app.tools.scan_eml --domain paypa1-secure.com
 ## Tests
 
 ```bash
-cd backend && pytest -q     # 36 tests, ~1 second
+cd backend && pytest -q     # 52 tests, ~1 second
 ```
 
 Covers the scoring engine and each analyser, typosquat classification, `.eml`

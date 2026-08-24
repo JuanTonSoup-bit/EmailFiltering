@@ -136,7 +136,7 @@ pip install pytest httpx
 pytest -q
 ```
 
-36 tests covering the scoring engine and each analyzer, typosquat
+52 tests covering the scoring engine and each analyzer, typosquat
 classification, `.eml` parsing, every dashboard aggregate, and every API
 endpoint including its failure modes. `tests/conftest.py` redirects
 `DATABASE_URL` to a temp file before any app module is imported, so a test run

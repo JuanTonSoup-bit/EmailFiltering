@@ -276,7 +276,7 @@ cd backend
 pytest -q
 ```
 
-Expect **36 passed**. No test touches the network or your real database.
+Expect **52 passed**. No test touches the network or your real database.
 
 Offline detection check, no credentials needed:
 

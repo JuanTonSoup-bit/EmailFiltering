@@ -470,7 +470,7 @@ cd backend
 .venv/bin/python -m pytest -q         # macOS / Linux
 ```
 
-36 tests, roughly one second. They cover the scoring engine and each analyser,
+52 tests, roughly one second. They cover the scoring engine and each analyser,
 typosquat technique classification, `.eml` parsing, every dashboard aggregate
 including the window semantics, and every API endpoint including its failure
 modes (out-of-range `days` → 422, unknown verdict → 422, missing id → 404,
