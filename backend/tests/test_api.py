@@ -147,7 +147,7 @@ def test_scan_without_credentials_fails_loudly_but_does_not_kill_the_app(
     """A manual scan with no OAuth client secret should return an error, and
     the rest of the API must keep working afterwards."""
     with pytest.raises(FileNotFoundError):
-        client.post("/api/scan")
+        client.post("/api/scan", headers={"X-PhishGuard-Client": "test"})
 
     assert client.get("/api/health").status_code == 200
 
@@ -186,3 +186,53 @@ def test_non_interactive_auth_raises_actionable_error(monkeypatch):
 
     # The message has to tell you what to actually do about it.
     assert "get_credentials" in str(excinfo.value)
+
+
+# --- State-changing endpoints are protected from cross-site requests -------
+# Without the header requirement, any web page you visited could POST to your
+# local API: triggering scans, or silently shutting the filter off.
+
+def test_scan_requires_client_header(client: TestClient):
+    response = client.post("/api/scan")
+    assert response.status_code == 403
+    assert "X-PhishGuard-Client" in response.json()["detail"]
+
+
+def test_shutdown_requires_client_header(client: TestClient):
+    response = client.post("/api/shutdown")
+    assert response.status_code == 403
+    # The guard must run BEFORE the handler - a rejected request must not have
+    # scheduled a shutdown.
+    assert client.get("/api/health").status_code == 200
+
+
+def test_shutdown_accepts_request_with_header(client: TestClient, monkeypatch):
+    """With the header present the endpoint accepts and schedules shutdown.
+    The actual exit is stubbed - a real one would kill the test run."""
+    from app import main
+
+    scheduled = {}
+
+    def fake_shutdown(delay: float = 0.25):
+        scheduled["called"] = True
+
+        async def noop():
+            return None
+
+        return noop()
+
+    monkeypatch.setattr(main, "_shutdown_soon", fake_shutdown)
+
+    response = client.post(
+        "/api/shutdown", headers={"X-PhishGuard-Client": "test"}
+    )
+    assert response.status_code == 200
+    assert response.json() == {"status": "stopping"}
+    assert scheduled.get("called") is True
+
+
+def test_read_endpoints_do_not_require_the_header(client: TestClient):
+    """The guard is for writes only. Reads staying open keeps curl, scripts,
+    and the browser's address bar usable."""
+    for path in ("/api/health", "/api/stats?days=7", "/api/emails"):
+        assert client.get(path).status_code == 200

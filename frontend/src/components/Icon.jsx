@@ -170,3 +170,13 @@ export function IconInfo(props) {
     </Svg>
   )
 }
+
+/** Power — the stop control. A distinct silhouette from refresh at 14px. */
+export function IconPower(props) {
+  return (
+    <Svg {...props}>
+      <path d="M12 4v8" />
+      <path d="M7.1 7.1a7 7 0 1 0 9.8 0" />
+    </Svg>
+  )
+}

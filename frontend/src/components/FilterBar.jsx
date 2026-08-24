@@ -1,4 +1,5 @@
-import { IconRefresh } from './Icon.jsx'
+import { useEffect, useState } from 'react'
+import { IconPower, IconRefresh } from './Icon.jsx'
 
 /**
  * The one filter row.
@@ -31,9 +32,25 @@ export function FilterBar({
   onDaysChange,
   onRefresh,
   onScan,
+  onStop,
   scanning,
+  stopping,
   busy,
 }) {
+  // Stop needs a confirmation, because it takes away the page you are looking
+  // at and nothing in the browser can bring it back -- restarting means the
+  // desktop shortcut or a terminal. An inline two-click confirm is enough
+  // friction to prevent a misclick without the ceremony of a modal.
+  const [confirmStop, setConfirmStop] = useState(false)
+
+  useEffect(() => {
+    if (!confirmStop) return
+    // Don't leave the button armed indefinitely; a Stop that is one stray
+    // click away five minutes later is a trap.
+    const id = setTimeout(() => setConfirmStop(false), 4000)
+    return () => clearTimeout(id)
+  }, [confirmStop])
+
   return (
     <div className="filterbar">
       <span className="filterbar__label" id="range-label">
@@ -73,9 +90,31 @@ export function FilterBar({
         type="button"
         className="btn btn--primary"
         onClick={onScan}
-        disabled={scanning}
+        disabled={scanning || stopping}
       >
         {scanning ? 'Scanning…' : 'Scan now'}
+      </button>
+
+      <button
+        type="button"
+        className={`btn${confirmStop ? ' btn--danger' : ''}`}
+        onClick={() => {
+          if (confirmStop) {
+            setConfirmStop(false)
+            onStop()
+          } else {
+            setConfirmStop(true)
+          }
+        }}
+        disabled={stopping || scanning}
+        title={
+          confirmStop
+            ? 'Click again to stop the server'
+            : 'Stop the PhishGuard server'
+        }
+      >
+        <IconPower size={14} />
+        {stopping ? 'Stopping…' : confirmStop ? 'Confirm stop' : 'Stop'}
       </button>
     </div>
   )

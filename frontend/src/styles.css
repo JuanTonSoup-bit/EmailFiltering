@@ -270,6 +270,20 @@ button {
   padding: 7px 9px;
 }
 
+/* Armed state for the two-click Stop confirmation. Critical is the status
+   token for "this is destructive", and the word changes with it so the
+   colour is not carrying the warning alone. */
+.btn--danger {
+  background: var(--status-critical);
+  border-color: var(--status-critical);
+  color: #ffffff;
+}
+
+.btn--danger:hover:not(:disabled) {
+  background: var(--status-critical);
+  filter: brightness(1.06);
+}
+
 /* The single filter row. Per the dashboard rules there is exactly one, it
    sits above everything it scopes, and every card below re-renders against
    the same slice - so the numbers on screen always agree with each other. */

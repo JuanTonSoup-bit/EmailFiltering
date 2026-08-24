@@ -14,6 +14,16 @@
 
 const BASE = '/api'
 
+/**
+ * Sent on every state-changing request.
+ *
+ * The value is irrelevant; its presence is the point. A custom header forces
+ * the browser to preflight a cross-origin request, and the backend's origin
+ * allowlist refuses preflights from anywhere but this app -- so a random web
+ * page cannot POST to your local API. See backend/app/api/guards.py.
+ */
+const CLIENT_HEADERS = { 'X-PhishGuard-Client': 'dashboard' }
+
 /** Thrown for any non-2xx response, carrying the status for the UI. */
 export class ApiError extends Error {
   /**
@@ -32,8 +42,10 @@ async function request(path, options = {}) {
   let response
   try {
     response = await fetch(`${BASE}${path}`, {
-      headers: { Accept: 'application/json' },
       ...options,
+      // Merged rather than spread over: a caller passing `headers` would
+      // otherwise replace the default Accept instead of adding to it.
+      headers: { Accept: 'application/json', ...(options.headers || {}) },
     })
   } catch (cause) {
     // fetch only rejects on a network-level failure, which in practice
@@ -99,5 +111,20 @@ export function getEmail(id) {
  * only write in the app. It returns {scanned, flagged, verdicts}.
  */
 export function triggerScan() {
-  return request('/scan', { method: 'POST' })
+  return request('/scan', { method: 'POST', headers: CLIENT_HEADERS })
+}
+
+/**
+ * Stop the server.
+ *
+ * The reply arrives before the process exits (the backend delays its own
+ * shutdown so the response can flush), so a resolved promise means "it
+ * accepted and is going down", not "it is already down".
+ *
+ * Nothing in a browser can start it again -- extensions cannot spawn local
+ * processes. Restarting means the desktop shortcut, the logon task, or
+ * scripts/Start-PhishGuard.ps1.
+ */
+export function stopServer() {
+  return request('/shutdown', { method: 'POST', headers: CLIENT_HEADERS })
 }

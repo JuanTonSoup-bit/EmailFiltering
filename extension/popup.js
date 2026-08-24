@@ -22,6 +22,16 @@ async function settings() {
 
 const api = (port, path) => `http://127.0.0.1:${port}/api${path}`;
 
+/**
+ * Required by the backend on anything that changes state.
+ *
+ * Its presence is what forces a CORS preflight, which is what stops a random
+ * web page from POSTing to your local API. The extension's own fetches run
+ * with host_permissions and are not subject to page CORS, so they simply set
+ * it. See backend/app/api/guards.py.
+ */
+const CLIENT_HEADERS = { 'X-PhishGuard-Client': 'extension' };
+
 async function getJson(url, timeoutMs = 4000) {
   const controller = new AbortController();
   const timer = setTimeout(() => controller.abort(), timeoutMs);
@@ -155,7 +165,10 @@ $('scan').addEventListener('click', async () => {
   $('foot').textContent = 'Contacting Gmail…';
 
   try {
-    const response = await fetch(api(port, '/scan'), { method: 'POST' });
+    const response = await fetch(api(port, '/scan'), {
+      method: 'POST',
+      headers: CLIENT_HEADERS,
+    });
     if (!response.ok) throw new Error(`HTTP ${response.status}`);
     const summary = await response.json();
     $('foot').textContent =
@@ -171,6 +184,62 @@ $('scan').addEventListener('click', async () => {
   } finally {
     button.disabled = false;
     button.textContent = 'Scan now';
+  }
+});
+
+// Stop arms on the first click and fires on the second. Without that, a
+// misclick next to "Scan now" silently switches your mail filter off - and
+// nothing in a browser can turn it back on.
+let stopArmed = false;
+let stopArmTimer = null;
+
+function disarmStop() {
+  stopArmed = false;
+  clearTimeout(stopArmTimer);
+  const button = $('stop');
+  button.classList.remove('btn--armed');
+  button.textContent = 'Stop';
+}
+
+$('stop').addEventListener('click', async () => {
+  const button = $('stop');
+
+  if (!stopArmed) {
+    stopArmed = true;
+    button.classList.add('btn--armed');
+    button.textContent = 'Confirm';
+    $('foot').textContent = 'Click again to stop the server.';
+    // Never leave it armed indefinitely.
+    stopArmTimer = setTimeout(() => {
+      disarmStop();
+      $('foot').textContent = '';
+    }, 4000);
+    return;
+  }
+
+  disarmStop();
+  button.disabled = true;
+  button.textContent = 'Stopping…';
+
+  try {
+    const response = await fetch(api((await settings()).port, '/shutdown'), {
+      method: 'POST',
+      headers: CLIENT_HEADERS,
+    });
+    if (!response.ok) throw new Error(`HTTP ${response.status}`);
+    // The reply lands before the process exits, so give it a moment before
+    // repainting - otherwise the popup still shows "Connected".
+    setTimeout(() => {
+      chrome.runtime.sendMessage({ type: 'refresh' });
+      load();
+    }, 700);
+    $('foot').textContent = 'Stopping — restart from the desktop shortcut.';
+  } catch (error) {
+    $('foot').textContent = 'Could not stop the server.';
+    console.warn('PhishGuard stop:', error);
+  } finally {
+    button.disabled = false;
+    button.textContent = 'Stop';
   }
 });
 

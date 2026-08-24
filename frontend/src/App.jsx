@@ -1,5 +1,11 @@
 import { useCallback, useEffect, useRef, useState } from 'react'
-import { getEmails, getHealth, getStats, triggerScan } from './api/client.js'
+import {
+  getEmails,
+  getHealth,
+  getStats,
+  stopServer,
+  triggerScan,
+} from './api/client.js'
 import { useFetch } from './hooks/useFetch.js'
 import { getTheme, setTheme as applyTheme } from './lib/theme.js'
 import { full } from './lib/format.js'
@@ -27,6 +33,11 @@ export default function App() {
   const [theme, setThemeState] = useState(getTheme)
   const [health, setHealth] = useState('unknown')
   const [scanning, setScanning] = useState(false)
+  const [stopping, setStopping] = useState(false)
+  // Set once the server confirms it is shutting down. Distinct from the
+  // generic "API unreachable" banner: this one knows the server went away on
+  // purpose, so it explains how to bring it back instead of implying a fault.
+  const [stopped, setStopped] = useState(false)
   const [toast, setToast] = useState(null)
 
   // Fetchers are wrapped in useCallback so useFetch re-runs exactly when the
@@ -109,6 +120,21 @@ export default function App() {
     }
   }
 
+  async function handleStop() {
+    setStopping(true)
+    try {
+      await stopServer()
+      // The server replies before it exits, so a success here means "accepted,
+      // going down" rather than "already down".
+      setStopped(true)
+      setHealth('down')
+    } catch (error) {
+      setToast({ kind: 'error', text: `Could not stop the server: ${error.message}` })
+    } finally {
+      setStopping(false)
+    }
+  }
+
   useEffect(() => {
     if (!toast) return
     const id = setTimeout(() => setToast(null), 9000)
@@ -118,13 +144,30 @@ export default function App() {
   const data = stats.data
   const busy = stats.loading || stats.stale || emails.loading || emails.stale
   const apiDown = health === 'down' || stats.error?.status === 0
-  const noDataYet = !stats.error && data && data.total_scanned === 0
+  const noDataYet = !stats.error && !stopped && data && data.total_scanned === 0
 
   return (
     <div className="app">
       <Header health={health} theme={theme} onThemeChange={changeTheme} />
 
-      {apiDown ? (
+      {stopped ? (
+        <div className="banner banner--info">
+          <IconInfo size={16} />
+          <div className="banner__body">
+            <div className="banner__title">PhishGuard stopped</div>
+            <div className="banner__text">
+              The server has shut down and is no longer scanning. Nothing in
+              the browser can start it again — extensions can’t launch local
+              processes. Use the <strong>PhishGuard</strong> desktop shortcut,
+              or run{' '}
+              <code className="mono">.\scripts\Start-PhishGuard.ps1</code>. It
+              will also come back on its own next time you sign in to Windows.
+            </div>
+          </div>
+        </div>
+      ) : null}
+
+      {apiDown && !stopped ? (
         <div className="banner">
           <IconInfo size={16} />
           <div className="banner__body">
@@ -160,7 +203,9 @@ export default function App() {
         onDaysChange={setDays}
         onRefresh={refreshAll}
         onScan={handleScan}
+        onStop={handleStop}
         scanning={scanning}
+        stopping={stopping}
         busy={busy}
       />
 

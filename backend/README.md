@@ -54,7 +54,8 @@ uvicorn app.main:app --reload --port 8000
 
 - On first run a browser opens for Google consent; a `token.json` is cached.
 - The poller scans your inbox every `POLL_INTERVAL_SECONDS`.
-- Trigger a scan immediately: `curl -X POST http://localhost:8000/api/scan`
+- Trigger a scan immediately:
+  `curl -X POST -H "X-PhishGuard-Client: cli" http://localhost:8000/api/scan`
 - API docs: http://localhost:8000/docs
 
 ## API
@@ -66,6 +67,30 @@ uvicorn app.main:app --reload --port 8000
 | GET    | `/api/emails`       | Scanned emails — `verdict`, `days`, `limit`, `offset` |
 | GET    | `/api/emails/{id}`  | One email with findings             |
 | POST   | `/api/scan`         | Run a scan cycle now                |
+| POST   | `/api/shutdown`     | Stop the server                     |
+
+### The `X-PhishGuard-Client` header
+
+The two POST endpoints require an `X-PhishGuard-Client` header. Any value
+works; its presence is the point.
+
+The API has no authentication, which is fine for reads. Writes are different:
+a browser will send a cross-origin POST to `127.0.0.1` from any page you
+happen to be visiting, and with `mode: 'no-cors'` the response is unreadable
+to the attacker but *the request still arrives*. Without this guard, any
+website could trigger scans or silently switch your mail filter off.
+
+A custom header forces the browser to send a CORS preflight first, and the
+preflight is checked against this app's origin allowlist -- so a page on
+someone else's site never gets its real request sent. Pages cannot opt out;
+it is enforced by the browser. The dashboard, the extension, and curl all
+just set the header.
+
+This is not authentication and does not pretend to be. It closes the specific
+hole where a *remote web page* drives your local API.
+
+GET endpoints are deliberately unguarded, so curl and the address bar stay
+usable.
 
 `days` uses the same calendar-day window on both `/api/stats` and
 `/api/emails`, anchored to midnight UTC, so every figure the dashboard shows

@@ -194,6 +194,17 @@ body {
 
 .btn--small { flex: none; padding: 5px 10px; }
 
+/* Stop is not the primary action, so it stays quiet until it is armed - at
+   which point it turns critical AND changes its label, so colour is never
+   the only thing signalling "this is destructive". */
+.btn--stop { flex: 0 0 auto; }
+
+.btn--armed {
+  background: var(--critical);
+  border-color: var(--critical);
+  color: #fff;
+}
+
 .foot {
   margin: 8px 0 0;
   font-size: 11px;
