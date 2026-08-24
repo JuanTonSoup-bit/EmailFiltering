@@ -3,10 +3,19 @@
 FastAPI service: Gmail integration, detection engine, background poller, and the
 dashboard API.
 
+> **In a hurry, or don't want to set up OAuth yet?** Skip to
+> [Demo mode](#demo-mode-no-google-account) — it fills the database with
+> realistic data scored by the real engine, so you can run the whole stack in
+> about five minutes with no Google account.
+>
+> **Full write-up** of what FastAPI, SQLAlchemy, Pydantic and uvicorn each do
+> and why they were chosen, plus a file-by-file tour, is in
+> [`../docs/BACKEND.md`](../docs/BACKEND.md).
+
 ## Prerequisites
 
-- Python 3.11+
-- A Google account (Gmail)
+- Python 3.11+ (3.14 tested)
+- A Google account (Gmail) — only for live scanning
 
 ## 1. Enable the Gmail API and get OAuth credentials
 
@@ -53,10 +62,29 @@ uvicorn app.main:app --reload --port 8000
 | Method | Path                | Description                         |
 |--------|---------------------|-------------------------------------|
 | GET    | `/api/health`       | Liveness check                      |
-| GET    | `/api/stats?days=14`| Dashboard aggregates                |
-| GET    | `/api/emails`       | Scanned emails (filter by `verdict`)|
+| GET    | `/api/stats?days=14`| Dashboard aggregates (1–90 days)    |
+| GET    | `/api/emails`       | Scanned emails — `verdict`, `days`, `limit`, `offset` |
 | GET    | `/api/emails/{id}`  | One email with findings             |
 | POST   | `/api/scan`         | Run a scan cycle now                |
+
+`days` uses the same calendar-day window on both `/api/stats` and
+`/api/emails`, anchored to midnight UTC, so every figure the dashboard shows
+comes from one identical slice of the data.
+
+## Demo mode (no Google account)
+
+`app/tools/seed_demo.py` fills the database with a realistic inbox mix so the
+dashboard can be run and reviewed before any OAuth setup:
+
+```bash
+python -m app.tools.seed_demo --count 160 --days 21
+python -m app.tools.seed_demo --reset          # wipe first
+python -m app.tools.seed_demo --seed 7         # repeatable data
+```
+
+Nothing in it hard-codes a verdict — every row is a synthetic message run
+through the real `analyze()` function, so if a weight changes in `engine.py`
+the demo data changes with it.
 
 ## Offline scanning (no Gmail account needed)
 
@@ -79,9 +107,15 @@ swaps (`paypal.co`).
 ## Tests
 
 ```bash
-pip install pytest
-pytest
+pip install pytest httpx
+pytest -q
 ```
+
+36 tests covering the scoring engine and each analyzer, typosquat
+classification, `.eml` parsing, every dashboard aggregate, and every API
+endpoint including its failure modes. `tests/conftest.py` redirects
+`DATABASE_URL` to a temp file before any app module is imported, so a test run
+can never read or write your real `data/phishguard.db`.
 
 ## How scoring works
 
@@ -89,3 +123,6 @@ Each analyzer contributes weighted, human-readable findings; the total maps to a
 verdict (`clean` / `junk` / `suspicious`) via thresholds in `.env`. See
 `app/analysis/engine.py`. Every finding is stored so the dashboard can explain
 *why* a message was flagged.
+
+Every signal, its weight, the reasoning behind it, and how to tune the
+thresholds against real results: [`../docs/DETECTION.md`](../docs/DETECTION.md).
